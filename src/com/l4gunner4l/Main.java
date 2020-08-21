@@ -11,5 +11,9 @@ public class Main {
 
         list.remove(2);
         list.remove(0);
+
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println(list.get(i));
+        }
     }
 }

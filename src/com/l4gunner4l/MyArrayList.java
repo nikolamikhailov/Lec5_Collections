@@ -1,18 +1,22 @@
 package com.l4gunner4l;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
-class MyArrayList<E> extends AbstractList<E>
-        implements List<E> {
+class MyArrayList<E> extends AbstractList<E> implements List<E> {
 
     private static final int DEFAULT_CAPACITY = 10;
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
     private static final Object[] EMPTY_ELEMENTDATA = {};
-    Object[] elementData;
+    private Object[] elementData;
     private int size;
 
-    public MyArrayList(int initialCapacity) {
+    MyArrayList() {
+        this.elementData = EMPTY_ELEMENTDATA;
+    }
+
+    MyArrayList(int initialCapacity) {
         if (initialCapacity > 0) {
             this.elementData = new Object[initialCapacity];
         } else if (initialCapacity == 0) {
@@ -22,15 +26,37 @@ class MyArrayList<E> extends AbstractList<E>
         }
     }
 
-    public MyArrayList() {
-        this.elementData = EMPTY_ELEMENTDATA;
-    }
-
     private static int hugeCapacity(int minCapacity) {
         if (minCapacity < 0) throw new OutOfMemoryError();
         return (minCapacity > MAX_ARRAY_SIZE)
                 ? Integer.MAX_VALUE
                 : MAX_ARRAY_SIZE;
+    }
+
+    @Override
+    public int size() {
+        return size;
+    }
+
+    @Override
+    public E get(int index) {
+        Objects.checkIndex(index, size);
+        return elementData(index);
+    }
+
+    @Override
+    public Spliterator<E> spliterator() {
+        return null;
+    }
+
+    @Override
+    public void replaceAll(UnaryOperator<E> operator) {
+
+    }
+
+    @Override
+    public void sort(Comparator<? super E> c) {
+
     }
 
     public void trimToSize() {
@@ -50,19 +76,23 @@ class MyArrayList<E> extends AbstractList<E>
         return true;
     }
 
-    private void add(E e, Object[] elementData, int s) {
-        if (s == elementData.length)
-            elementData = grow();
-        elementData[s] = e;
-        size = s + 1;
-    }
-
     public E remove(int index) {
         if (index < 0 || index >= size)
             throw new IndexOutOfBoundsException("Index out of range");
         E oldValue = (E) elementData[index];
         fastRemove(elementData, index);
         return oldValue;
+    }
+
+    public Iterator<E> iterator() {
+        return new Itr();
+    }
+
+    private void add(E e, Object[] elementData, int s) {
+        if (s == elementData.length)
+            elementData = grow();
+        elementData[s] = e;
+        size = s + 1;
     }
 
     private void fastRemove(Object[] es, int i) {
@@ -73,29 +103,8 @@ class MyArrayList<E> extends AbstractList<E>
         es[size = newSize] = null;
     }
 
-    @Override
-    public E get(int index) {
-        return null;
-    }
-
-    @Override
-    public Spliterator<E> spliterator() {
-        return null;
-    }
-
-    @Override
-    public int size() {
-        return size;
-    }
-
-    @Override
-    public void replaceAll(UnaryOperator<E> operator) {
-
-    }
-
-    @Override
-    public void sort(Comparator<? super E> c) {
-
+    private E elementData(int index) {
+        return (E) elementData[index];
     }
 
     private Object[] grow() {
@@ -119,5 +128,68 @@ class MyArrayList<E> extends AbstractList<E>
         return (newCapacity - MAX_ARRAY_SIZE <= 0)
                 ? newCapacity
                 : hugeCapacity(minCapacity);
+    }
+
+    private class Itr implements Iterator<E> {
+        int cursor;
+        int lastRet = -1;
+        int expectedModCount = modCount;
+
+        Itr() {
+        }
+
+        public boolean hasNext() {
+            return cursor != size;
+        }
+
+        public E next() {
+            checkForComodification();
+            int i = cursor;
+            if (i >= size)
+                throw new NoSuchElementException();
+            Object[] elementData = MyArrayList.this.elementData;
+            if (i >= elementData.length)
+                throw new ConcurrentModificationException();
+            cursor = i + 1;
+            return (E) elementData[lastRet = i];
+        }
+
+        public void remove() {
+            if (lastRet < 0)
+                throw new IllegalStateException();
+            checkForComodification();
+
+            try {
+                MyArrayList.this.remove(lastRet);
+                cursor = lastRet;
+                lastRet = -1;
+                expectedModCount = modCount;
+            } catch (IndexOutOfBoundsException ex) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            final int size = MyArrayList.this.size;
+            int i = cursor;
+            if (i < size) {
+                final Object[] es = elementData;
+                if (i >= es.length)
+                    throw new ConcurrentModificationException();
+                for (; i < size && modCount == expectedModCount; i++)
+                    action.accept((E) es[i]);
+                // update once at end to reduce heap write traffic
+                cursor = i;
+                lastRet = i - 1;
+                checkForComodification();
+            }
+        }
+
+        final void checkForComodification() {
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+        }
     }
 }
